@@ -81,7 +81,7 @@ def table_to_dataframe(table):
     col_names = []
     for col in columns:
         col_classes.append(col.get('class')[0])
-        col_names.append(col.text)
+        col_names.append(col.text.strip())
 
     # get the data for each column and add to dataframe
     # data = []
