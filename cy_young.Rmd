@@ -12,30 +12,33 @@ library(rcv)
 year <- 2018
 
 # data frames were scraped from bbwaa.com using scrape_data_frames.py
-al.df <- read_csv(paste0("./data/", year, "_AL_MVP_detail.csv"), col_types=cols())
-nl.df <- read_csv(paste0("./data/", year, "_NL_MVP_detail.csv"), col_types=cols())
+al.df <- read_csv(paste0("./data/", year, "_AL_CyYoung_detail.csv"), col_types=cols())
+nl.df <- read_csv(paste0("./data/", year, "_NL_CyYoung_detail.csv"), col_types=cols())
 
-rank.vals <- c("first", "second", "third", "fourth", "fifth",
-               "sixth", "seventh", "eighth", "ninth", "tenth")
+rank.vals <- c("first", "second", "third", "fourth", "fifth")
 
 colnames(al.df) <- c("name", "affiliation", "chapter", rank.vals)
 colnames(nl.df) <- c("name", "affiliation", "chapter", rank.vals)
 
-al.summary <- read_csv(paste0("./data/", year, "_AL_MVP_summary.csv"), col_types=cols())
-nl.summary <- read_csv(paste0("./data/", year, "_NL_MVP_summary.csv"), col_types=cols())
+al.summary <- read_csv(paste0("./data/", year, "_AL_CyYoung_summary.csv"), col_types=cols())
+nl.summary <- read_csv(paste0("./data/", year, "_NL_CyYoung_summary.csv"), col_types=cols())
 ```
 
 ```{r}
 # fix any known data issues (errors that occur in the source data)
 known_fixes <- function(vals, year) {
   for (i in 1:length(vals)) {
-    if ((vals[i] == "La Roche") & (year == 2012)) { vals[i] <- "LaRoche" }
-    else if ((vals[i] == "Oritz") & (year == 2013)) { vals[i] <- "Ortiz" }
-    else if ((vals[i] == "A.Gonzalez") & (year == 2013)) { vals[i] <- "Gonzalez" }
-    else if ((vals[i] == "J. Upton") & (year == 2014)) { vals[i] <- "Upton" }
-    else if ((vals[i] == "Davis") & (year == 2015)) { vals[i] <- "C.Davis" }
-    else if ((vals[i] == "McCutcheon") & (year == 2015)) { vals[i] <- "McCutchen" }
-    else if ((vals[i] == "Goldschmiidt") & (year == 2017)) { vals[i] <- "Goldschmidt" }
+    if (vals[i] == "DeGrom") { vals[i] <- "deGrom" }  # this is often consistent, but it's wrong
+    else if ((vals[i] == paste0("Moore", intToUtf8(160))) & (year == 2013)) { vals[i] <- "Moore" }
+    else if ((vals[i] == "Fernández") & (year == 2013)) { vals[i] <- "Fernandez" }
+    else if ((vals[i] == "Grienke") & (year == 2013)) { vals[i] <- "Greinke" }
+    else if ((vals[i] == "Zimmerman") & (year == 2013)) { vals[i] <- "Zimmermann" }
+    else if ((vals[i] == "Zimmerman") & (year == 2014)) { vals[i] <- "Zimmermann" }
+    else if ((vals[i] == "Grienke") & (year == 2015)) { vals[i] <- "Greinke" }
+    else if ((vals[i] == "Grenkie") & (year == 2015)) { vals[i] <- "Greinke" }
+    else if ((vals[i] == "Jon Lester") & (year == 2016)) { vals[i] <- "Lester" }
+    else if ((vals[i] == "Geinke") & (year == 2017)) { vals[i] <- "Greinke" }
+    else if ((vals[i] == "Velander") & (year == 2018)) { vals[i] <- "Verlander" }
   }
   
   return(vals)
@@ -90,13 +93,15 @@ Recreate the results from the actual voting process.
 
 ```{r results='hold'}
 # set weights for how MLB tallies the votes
-mlb.weights <- c(14, 9:1)
+mlb.weights <- c(7, 4:1)
 
 # create data frame that will store vote tallies
 al.player.df <- data.frame(player=al.players)
 nl.player.df <- data.frame(player=nl.players)
 
-for (col in rank.vals) {
+cols <- c("first", "second", "third", "fourth", "fifth")
+
+for (col in cols) {
   al.player.df[,col] <- 0
   nl.player.df[,col] <- 0
 }
@@ -104,7 +109,7 @@ al.player.df$total <- 0
 nl.player.df$total <- 0
 
 i <- 1
-for (col in rank.vals) {
+for (col in cols) {
   votes.al <- as.data.frame(al.df)[,col]
   votes.nl <- as.data.frame(nl.df)[,col]
   
@@ -162,41 +167,32 @@ Using `rcv` package (https://github.com/cran/rcv).
 ```{r results='hold'}
 al.rcv.df <- al.df %>% 
   select(-affiliation, -chapter) %>% 
-  gather(key="vote_rank", value="candidate", first, second, third, fourth, 
-         fifth, sixth, seventh, eighth, ninth, tenth) %>% 
+  gather(key="vote_rank", value="candidate", first, second, third, fourth, fifth) %>% 
   mutate(vote_rank = case_when(vote_rank == "first" ~ 1,
                                vote_rank == "second" ~ 2,
                                vote_rank == "third" ~ 3,
                                vote_rank == "fourth" ~ 4,
-                               vote_rank == "fifth" ~ 5,
-                               vote_rank == "sixth" ~ 6,
-                               vote_rank == "seventh" ~ 7,
-                               vote_rank == "eighth" ~ 8,
-                               vote_rank == "ninth" ~ 9,
-                               vote_rank == "tenth" ~ 10)) %>% 
+                               vote_rank == "fifth" ~ 5)) %>% 
   rename(pref_voter_id = name) %>% 
   arrange(pref_voter_id, vote_rank)
 
-rcv_tally(al.rcv.df) %>% head()
+rcv.al.out <- rcv_tally(al.rcv.df)
 
 nl.rcv.df <- nl.df %>% 
   select(-affiliation, -chapter) %>% 
-  gather(key="vote_rank", value="candidate", first, second, third, fourth, 
-         fifth, sixth, seventh, eighth, ninth, tenth) %>% 
+  gather(key="vote_rank", value="candidate", first, second, third, fourth, fifth) %>% 
   mutate(vote_rank = case_when(vote_rank == "first" ~ 1,
                                vote_rank == "second" ~ 2,
                                vote_rank == "third" ~ 3,
                                vote_rank == "fourth" ~ 4,
-                               vote_rank == "fifth" ~ 5,
-                               vote_rank == "sixth" ~ 6,
-                               vote_rank == "seventh" ~ 7,
-                               vote_rank == "eighth" ~ 8,
-                               vote_rank == "ninth" ~ 9,
-                               vote_rank == "tenth" ~ 10)) %>% 
+                               vote_rank == "fifth" ~ 5)) %>% 
   rename(pref_voter_id = name) %>% 
   arrange(pref_voter_id, vote_rank)
 
-rcv_tally(nl.rcv.df) %>% head()
+rcv.nl.out <- rcv_tally(nl.rcv.df)
+
+rcv.al.out
+rcv.nl.out
 ```
 
 
