@@ -1,1 +1,5 @@
 Cy Young and MVP voting.Rproj
+.Rproj.user
+.idea/
+.DS_Store
+.Rhistory
